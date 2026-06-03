@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cafe Management System</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: Arial, sans-serif;
+            background: #f5f5f5;
+            padding: 20px;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        h1 {
+            text-align: center;
+            color: #6F4E37;
+            margin-bottom: 20px;
+        }
+        .nav {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        .nav button {
+            background: #6F4E37;
+            color: white;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        .nav button:hover {
+            background: #5a3e2b;
+        }
+        .card {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        .card h2 {
+            color: #6F4E37;
+            margin-bottom: 15px;
+            border-bottom: 2px solid #6F4E37;
+            padding-bottom: 10px;
+        }
+        input {
+            padding: 10px;
+            margin: 5px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            width: 200px;
+        }
+        button {
+            padding: 10px 20px;
+            margin: 5px;
+            background: #6F4E37;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        button:hover {
+            background: #5a3e2b;
+        }
+        .product-list, .order-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+        .product-item, .order-item {
+            background: #f9f9f9;
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px solid #eee;
+        }
+        .product-item h3 {
+            color: #6F4E37;
+            margin-bottom: 10px;
+        }
+        .price {
+            color: green;
+            font-weight: bold;
+            font-size: 18px;
+        }
+        .cart-item {
+            background: #fff3e0;
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 5px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .hidden {
+            display: none;
+        }
+        .token-info {
+            background: #e0f7fa;
+            padding: 10px;
+            border-radius: 5px;
+            margin-top: 15px;
+            word-break: break-all;
+        }
+        .status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 5px;
+        }
+        .success {
+            background: #d4edda;
+            color: #155724;
+        }
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        .cart-total {
+            font-size: 20px;
+            font-weight: bold;
+            margin: 15px 0;
+            text-align: right;
+        }
+        .badge {
+            background: #6F4E37;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>☕ Cafe Management System</h1>
+        
+        <div class="nav">
+            <button onclick="showSection('auth')">🔐 Login / Register</button>
+            <button onclick="showSection('products')">☕ Products</button>
+            <button onclick="showSection('cart')">🛒 Cart (<span id="cartCount">0</span>)</button>
+            <button onclick="showSection('orders')">📦 My Orders</button>
+        </div>
+
+        <div id="auth" class="card">
+            <h2>Login / Register</h2>
+            <div id="authStatus"></div>
+            <input type="text" id="username" placeholder="Username">
+            <input type="email" id="email" placeholder="Email">
+            <input type="password" id="password" placeholder="Password">
+            <input type="text" id="fullName" placeholder="Full Name">
+            <br>
+            <button onclick="register()">📝 Register</button>
+            <button onclick="login()">🔑 Login</button>
+            <div id="tokenDisplay" class="token-info hidden"></div>
+        </div>
+
+        <div id="products" class="card hidden">
+            <h2>☕ Our Menu</h2>
+            <div id="productsList" class="product-list">Loading menu...</div>
+        </div>
+
+        <div id="cart" class="card hidden">
+            <h2>🛒 Your Cart</h2>
+            <div id="cartItems">Cart is empty</div>
+            <div id="cartTotal" class="cart-total"></div>
+            <button onclick="placeOrder()">✅ Place Order</button>
+            <button onclick="clearCart()">🗑️ Clear Cart</button>
+        </div>
+
+        <div id="orders" class="card hidden">
+            <h2>📦 My Orders</h2>
+            <div id="ordersList" class="order-list">Loading orders...</div>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = 'http://localhost:8083';
+        let currentToken = localStorage.getItem('token') || null;
+        let cart = JSON.parse(localStorage.getItem('cart') || '[]');
+
+        function updateCartCount() {
+            const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
+            document.getElementById('cartCount').innerText = totalItems;
+        }
+
+        function showSection(section) {
+            document.getElementById('auth').classList.add('hidden');
+            document.getElementById('products').classList.add('hidden');
+            document.getElementById('cart').classList.add('hidden');
+            document.getElementById('orders').classList.add('hidden');
+            document.getElementById(section).classList.remove('hidden');
+            if (section === 'products') loadProducts();
+            if (section === 'orders') loadOrders();
+            if (section === 'cart') displayCart();
+        }
+
+        function showStatus(message, isError = false) {
+            const statusDiv = document.getElementById('authStatus');
+            statusDiv.innerHTML = `<div class="status ${isError ? 'error' : 'success'}">${message}</div>`;
+            setTimeout(() => statusDiv.innerHTML = '', 5000);
+        }
+
+        async function register() {
+            const username = document.getElementById('username').value;
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const fullName = document.getElementById('fullName').value;
+
+            if (!username || !email || !password) {
+                showStatus('Please fill all fields', true);
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_URL}/api/auth/register`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, email, password, fullName, role: 'USER' })
+                });
+                const data = await response.json();
+                if (response.ok) {
+                    showStatus('✅ Registration successful! Please login.');
+                    document.getElementById('email').value = '';
+                    document.getElementById('password').value = '';
+                } else {
+                    showStatus('❌ Registration failed: ' + JSON.stringify(data), true);
+                }
+            } catch (error) {
+                showStatus('❌ Error: ' + error.message, true);
+            }
+        }
+
+        async function login() {
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+
+            if (!email || !password) {
+                showStatus('Please enter email and password', true);
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_URL}/api/auth/login`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, password })
+                });
+                const data = await response.json();
+                if (response.ok) {
+                    currentToken = data.token;
+                    localStorage.setItem('token', currentToken);
+                    document.getElementById('tokenDisplay').innerHTML = `✅ Logged in as: ${data.email} (${data.role})`;
+                    document.getElementById('tokenDisplay').classList.remove('hidden');
+                    showStatus('✅ Login successful!');
+                    updateCartCount();
+                    loadProducts();
+                } else {
+                    showStatus('❌ Invalid email or password', true);
+                }
+            } catch (error) {
+                showStatus('❌ Error: ' + error.message, true);
+            }
+        }
+
+        async function loadProducts() {
+            if (!currentToken) {
+                document.getElementById('productsList').innerHTML = '<p>🔐 Please login first</p>';
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_URL}/api/products`, {
+                    headers: { 'Authorization': `Bearer ${currentToken}` }
+                });
+                const products = await response.json();
+                if (!products || products.length === 0) {
+                    document.getElementById('productsList').innerHTML = '<p>No products available.</p>';
+                    return;
+                }
+                document.getElementById('productsList').innerHTML = products.map(product => `
+                    <div class="product-item">
+                        <h3>${product.name}</h3>
+                        <p>${product.description || 'Delicious item'}</p>
+                        <p class="price">💰 $${product.price}</p>
+                        <button onclick="addToCart(${product.id}, '${product.name}', ${product.price})">🛒 Add to Cart</button>
+                    </div>
+                `).join('');
+            } catch (error) {
+                document.getElementById('productsList').innerHTML = '<p>❌ Error loading products</p>';
+            }
+        }
+
+        function addToCart(id, name, price) {
+            const existing = cart.find(item => item.id === id);
+            if (existing) {
+                existing.quantity++;
+            } else {
+                cart.push({ id, name, price, quantity: 1 });
+            }
+            localStorage.setItem('cart', JSON.stringify(cart));
+            updateCartCount();
+            displayCart();
+            showSection('cart');
+        }
+
+        function displayCart() {
+            if (cart.length === 0) {
+                document.getElementById('cartItems').innerHTML = '<p>🛒 Your cart is empty</p>';
+                document.getElementById('cartTotal').innerHTML = '';
+                return;
+            }
+            let total = 0;
+            document.getElementById('cartItems').innerHTML = cart.map((item, index) => {
+                const subtotal = item.price * item.quantity;
+                total += subtotal;
+                return `
+                    <div class="cart-item">
+                        <div>
+                            <strong>${item.name}</strong><br>
+                            $${item.price} x ${item.quantity}
+                        </div>
+                        <div>
+                            Subtotal: $${subtotal.toFixed(2)}
+                            <button onclick="removeFromCart(${index})">🗑️</button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+            document.getElementById('cartTotal').innerHTML = `Total: $${total.toFixed(2)}`;
+        }
+
+        function removeFromCart(index) {
+            cart.splice(index, 1);
+            localStorage.setItem('cart', JSON.stringify(cart));
+            updateCartCount();
+            displayCart();
+        }
+
+        function clearCart() {
+            cart = [];
+            localStorage.setItem('cart', JSON.stringify(cart));
+            updateCartCount();
+            displayCart();
+        }
+
+        async function placeOrder() {
+            console.log("=== PLACE ORDER CLICKED ===");
+            
+            if (!currentToken) {
+                alert('Please login first');
+                showSection('auth');
+                return;
+            }
+            
+            if (cart.length === 0) {
+                alert('Cart is empty');
+                return;
+            }
+            
+            const items = cart.map(item => ({ productId: item.id, quantity: item.quantity }));
+            console.log("Sending order:", JSON.stringify({ items }));
+            
+            try {
+                const response = await fetch(`${API_URL}/api/orders/create`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${currentToken}`
+                    },
+                    body: JSON.stringify({ items })
+                });
+                
+                console.log("Response status:", response.status);
+                const data = await response.json();
+                console.log("Response data:", data);
+                
+                if (response.ok) {
+                    alert(`✅ Order placed successfully!\nOrder ID: ${data.orderId}\nTotal: $${data.totalAmount}`);
+                    cart = [];
+                    localStorage.setItem('cart', JSON.stringify(cart));
+                    updateCartCount();
+                    displayCart();
+                    loadOrders();
+                    showSection('orders');
+                } else {
+                    alert('❌ Order failed: ' + JSON.stringify(data));
+                }
+            } catch (error) {
+                console.error("Error:", error);
+                alert('❌ Error: ' + error.message);
+            }
+        }
+
+        async function loadOrders() {
+            if (!currentToken) {
+                document.getElementById('ordersList').innerHTML = '<p>🔐 Please login first</p>';
+                return;
+            }
+            try {
+                const response = await fetch(`${API_URL}/api/orders/my-orders`, {
+                    headers: { 'Authorization': `Bearer ${currentToken}` }
+                });
+                const orders = await response.json();
+                if (!orders || orders.length === 0) {
+                    document.getElementById('ordersList').innerHTML = '<p>No orders yet.</p>';
+                    return;
+                }
+                document.getElementById('ordersList').innerHTML = orders.map(order => `
+                    <div class="order-item">
+                        <h3>📦 Order #${order.orderNumber}</h3>
+                        <p>Status: ${order.status}</p>
+                        <p>💰 Total: $${order.totalAmount}</p>
+                        <p>📅 Date: ${new Date(order.orderTime).toLocaleString()}</p>
+                        <p>Items: ${order.items?.map(i => `${i.productName} x${i.quantity}`).join(', ') || 'N/A'}</p>
+                    </div>
+                `).join('');
+            } catch (error) {
+                document.getElementById('ordersList').innerHTML = '<p>❌ Error loading orders</p>';
+            }
+        }
+
+        // Initialize
+        updateCartCount();
+        if (currentToken) {
+            document.getElementById('tokenDisplay').innerHTML = `✅ Already logged in!`;
+            document.getElementById('tokenDisplay').classList.remove('hidden');
+            loadProducts();
+        }
+    </script>
+</body>
+</html>
