@@ -31,6 +31,7 @@ jobs:
 
     # Build Spring Boot
     - name: Build Backend
+      working-directory: Backend/backend
       run: |
         ./mvnw clean package -DskipTests
 
