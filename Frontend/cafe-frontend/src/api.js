@@ -1,4 +1,4 @@
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080';
+const API_URL = import.meta.env.VITE_API_URL || 'https://cafe-backend.azurewebsites.net';
 
 async function request(path, options = {}) {
   const token = localStorage.getItem('cafe_token');
