@@ -1,4 +1,6 @@
-const API_URL = import.meta.env.VITE_API_URL || 'https://cafe-backend.azurewebsites.net';
+const API_URL =
+  import.meta.env.VITE_API_URL ||
+  'https://cafe-backend-code-f8fkedctaqdbcafy.southeastasia-01.azurewebsites.net';
 
 async function request(path, options = {}) {
   const token = localStorage.getItem('cafe_token');
@@ -27,6 +29,7 @@ async function request(path, options = {}) {
       (body && typeof body === 'object' && (body.error || body.message)) ||
       (typeof body === 'string' && body) ||
       `Request failed (${res.status})`;
+
     throw new Error(message);
   }
 
@@ -34,7 +37,7 @@ async function request(path, options = {}) {
 }
 
 export const api = {
-  // ---- Auth ----
+  // Authentication
   register: (data) =>
     request('/api/auth/register', {
       method: 'POST',
@@ -47,7 +50,7 @@ export const api = {
       body: JSON.stringify({ email, password }),
     }),
 
-  // ---- Products ----
+  // Products
   getProducts: () => request('/api/products'),
 
   getProduct: (id) => request(`/api/products/${id}`),
@@ -58,12 +61,15 @@ export const api = {
       body: JSON.stringify(product),
     }),
 
-  // ---- Orders ----
+  // Orders
   createOrder: (items) =>
     request('/api/orders/create', {
       method: 'POST',
       body: JSON.stringify({
-        items: items.map((i) => ({ productId: i.productId, quantity: i.quantity })),
+        items: items.map((i) => ({
+          productId: i.productId,
+          quantity: i.quantity,
+        })),
       }),
     }),
 
