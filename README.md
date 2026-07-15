@@ -11,8 +11,9 @@ A full-stack web application for managing cafe orders, products, and users.
 
 ## 🛠️ Tech Stack
 - **Backend:** Spring Boot, Spring Security, JWT, JPA/Hibernate
-- **Database:** H2 Database
-- **Frontend:** HTML, CSS, JavaScript
+- **Database:** My SQL
+- **Frontend:** REACT,VITE
+  
 
 ## 📦 Setup Instructions
 
